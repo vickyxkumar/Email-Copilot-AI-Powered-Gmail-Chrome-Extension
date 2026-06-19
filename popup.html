@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root{
+      --ink:#0e1525; --paper:#fbfaf7; --surface:#fff; --accent:#5b5bd6;
+      --accent-press:#4a4ac0; --text:#1d2230; --muted:#5a6072; --line:#e7e4dc;
+      --line-strong:#d8d4ca; --positive:#0ba678; --danger:#c0392b;
+      --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    }
+    *{box-sizing:border-box}
+    body{
+      width:340px; margin:0; font-family:var(--font); color:var(--text);
+      background:var(--paper);
+    }
+    header{
+      background:var(--ink); color:#fff; padding:14px 16px;
+    }
+    .eyebrow{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#9aa3bd;font-weight:600}
+    .title{font-size:15px;font-weight:700;margin-top:2px}
+    main{padding:16px}
+    label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 6px}
+    .field{margin-bottom:14px}
+    input{
+      width:100%; border:1px solid var(--line-strong); border-radius:9px;
+      padding:9px 11px; font-size:13px; font-family:var(--mono); color:var(--text);
+      background:var(--surface);
+    }
+    input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(91,91,214,.15)}
+    .row{display:flex;gap:10px}
+    .row .field{flex:1}
+    .hint{font-size:11px;color:var(--muted);margin-top:5px;line-height:1.45}
+    .note{
+      font-size:11.5px;line-height:1.5;background:#fdf3e3;border:1px solid #f0d8a8;
+      color:#8a5a12;border-radius:9px;padding:9px 11px;margin-bottom:14px;
+    }
+    button{
+      width:100%;border:none;border-radius:10px;padding:11px;font-family:var(--font);
+      font-size:13px;font-weight:600;color:#fff;background:var(--accent);cursor:pointer;
+    }
+    button:hover{background:var(--accent-press)}
+    .saved{
+      text-align:center;font-size:12px;color:var(--positive);font-weight:600;
+      margin-top:10px;height:14px;opacity:0;transition:opacity .15s;
+    }
+    .saved.show{opacity:1}
+    footer{padding:0 16px 16px;font-size:11px;color:var(--muted);line-height:1.5}
+    code{font-family:var(--mono);background:#f1eee7;padding:1px 4px;border-radius:4px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="eyebrow">Mail RAG</div>
+    <div class="title">Backend settings</div>
+  </header>
+  <main>
+    <div class="note">
+      Add your backend's host to <code>host_permissions</code> in
+      <code>manifest.json</code> when you move off localhost, or requests will be blocked.
+    </div>
+
+    <div class="field">
+      <label for="base">API base URL</label>
+      <input id="base" placeholder="http://localhost:8000" spellcheck="false">
+    </div>
+
+    <div class="field">
+      <label for="ask">Ask endpoint</label>
+      <input id="ask" placeholder="/ask" spellcheck="false">
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label for="reply">Reply endpoint</label>
+        <input id="reply" placeholder="/reply" spellcheck="false">
+      </div>
+      <div class="field">
+        <label for="analyze">Analyze endpoint</label>
+        <input id="analyze" placeholder="/analyze" spellcheck="false">
+      </div>
+    </div>
+    <div class="hint">Your reply endpoint was listed as <code>/ask</code> in the spec — likely a typo. Default is <code>/reply</code>; change it here if your route differs.</div>
+
+    <button id="save">Save settings</button>
+    <div class="saved" id="saved">Saved</div>
+  </main>
+  <footer>
+    Reload your Gmail tab after changing the base URL.
+  </footer>
+  <script src="popup.js"></script>
+</body>
+</html>

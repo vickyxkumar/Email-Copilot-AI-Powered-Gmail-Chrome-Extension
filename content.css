@@ -1,0 +1,451 @@
+/* All extension UI lives under #mrag-root. Every selector is prefixed and the
+   root resets inherited Gmail styles so the panel looks the same regardless of
+   where Google nests it. */
+
+#mrag-root,
+#mrag-root * {
+  box-sizing: border-box;
+}
+
+#mrag-root {
+  /* palette: a calm "thinking layer" deliberately off Gmail's red */
+  --ink: #0e1525;
+  --paper: #fbfaf7;
+  --surface: #ffffff;
+  --accent: #5b5bd6;
+  --accent-press: #4a4ac0;
+  --positive: #0ba678;
+  --amber: #d98a1f;
+  --text: #1d2230;
+  --muted: #5a6072;
+  --line: #e7e4dc;
+  --line-strong: #d8d4ca;
+  --danger: #c0392b;
+
+  --radius: 12px;
+  --shadow: 0 10px 40px rgba(14, 21, 37, 0.18);
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  all: initial;
+  font-family: var(--font);
+  color: var(--text);
+}
+
+/* ---- launcher button ---- */
+#mrag-launcher {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 2147482000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 16px 0 14px;
+  border: none;
+  border-radius: 22px;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+#mrag-launcher:hover { transform: translateY(-1px); background: #161f33; }
+#mrag-launcher:active { transform: translateY(0); }
+#mrag-launcher .mrag-spark {
+  width: 18px; height: 18px; flex: none;
+}
+#mrag-root.mrag-open #mrag-launcher { display: none; }
+
+/* ---- panel shell ---- */
+#mrag-panel {
+  position: fixed;
+  top: 0; right: 0;
+  width: 392px;
+  max-width: 100vw;
+  height: 100vh;
+  z-index: 2147482100;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  border-left: 1px solid var(--line-strong);
+  box-shadow: var(--shadow);
+  transform: translateX(100%);
+  transition: transform 0.22s cubic-bezier(0.22, 0.61, 0.36, 1);
+  font-family: var(--font);
+}
+#mrag-root.mrag-open #mrag-panel { transform: translateX(0); }
+
+/* ---- header ---- */
+#mrag-panel .mrag-header {
+  flex: none;
+  background: var(--ink);
+  color: #fff;
+  padding: 14px 16px 12px;
+}
+#mrag-panel .mrag-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+#mrag-panel .mrag-brand {
+  display: flex; align-items: center; gap: 9px;
+}
+#mrag-panel .mrag-brand .mrag-spark { width: 20px; height: 20px; }
+#mrag-panel .mrag-eyebrow {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #9aa3bd;
+  font-weight: 600;
+  line-height: 1;
+}
+#mrag-panel .mrag-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  margin-top: 2px;
+}
+#mrag-panel .mrag-iconbtn {
+  all: unset;
+  cursor: pointer;
+  color: #c3cadb;
+  width: 28px; height: 28px;
+  display: grid; place-items: center;
+  border-radius: 7px;
+}
+#mrag-panel .mrag-iconbtn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+/* ---- context bar (the signature: the assistant's live awareness) ---- */
+#mrag-panel .mrag-context {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 12px;
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 9px;
+}
+#mrag-panel .mrag-dot {
+  width: 8px; height: 8px; flex: none;
+  border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 0 3px rgba(217,138,31,0.18);
+}
+#mrag-root.mrag-has-thread #mrag-panel .mrag-dot {
+  background: var(--positive);
+  box-shadow: 0 0 0 3px rgba(11,166,120,0.18);
+}
+#mrag-panel .mrag-context-text { min-width: 0; flex: 1; }
+#mrag-panel .mrag-context-label {
+  font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase;
+  color: #9aa3bd; line-height: 1;
+}
+#mrag-panel .mrag-context-subject {
+  font-size: 12.5px; color: #eef1f8; font-weight: 600;
+  margin-top: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#mrag-panel .mrag-context-id {
+  font-family: var(--mono); font-size: 10.5px; color: #8b93ab; margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ---- tabs ---- */
+#mrag-panel .mrag-tabs {
+  flex: none;
+  display: flex;
+  gap: 2px;
+  padding: 8px 10px 0;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+#mrag-panel .mrag-tab {
+  all: unset;
+  cursor: pointer;
+  flex: 1;
+  text-align: center;
+  padding: 9px 6px 11px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+#mrag-panel .mrag-tab:hover { color: var(--text); }
+#mrag-panel .mrag-tab.is-active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* ---- panes ---- */
+#mrag-panel .mrag-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+#mrag-panel .mrag-pane { display: none; flex: 1; min-height: 0; flex-direction: column; }
+#mrag-panel .mrag-pane.is-active { display: flex; }
+
+/* scroll regions */
+#mrag-panel .mrag-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+/* ---- chat (Ask) ---- */
+#mrag-panel .mrag-msg { margin-bottom: 14px; max-width: 100%; }
+#mrag-panel .mrag-msg-user {
+  margin-left: auto;
+  max-width: 86%;
+  background: var(--ink);
+  color: #fff;
+  padding: 9px 12px;
+  border-radius: 12px 12px 4px 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+#mrag-panel .mrag-msg-bot {
+  max-width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  padding: 12px 13px;
+  border-radius: 12px 12px 12px 4px;
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+#mrag-panel .mrag-meta {
+  margin-top: 7px;
+  font-size: 10.5px;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+#mrag-panel .mrag-sources {
+  margin-top: 10px;
+  border-top: 1px dashed var(--line-strong);
+  padding-top: 9px;
+}
+#mrag-panel .mrag-sources-title {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--muted); margin-bottom: 6px; font-weight: 700;
+}
+#mrag-panel .mrag-source {
+  font-size: 12px;
+  padding: 7px 9px;
+  background: #f4f2ec;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  line-height: 1.45;
+  word-wrap: break-word;
+}
+#mrag-panel .mrag-source b { color: var(--text); }
+#mrag-panel .mrag-source a { color: var(--accent); text-decoration: none; }
+#mrag-panel .mrag-source a:hover { text-decoration: underline; }
+
+#mrag-panel .mrag-empty {
+  margin: auto;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 24px;
+  max-width: 280px;
+}
+#mrag-panel .mrag-empty .mrag-empty-spark { opacity: 0.5; margin-bottom: 10px; }
+
+/* ---- composer (chat input) ---- */
+#mrag-panel .mrag-composer {
+  flex: none;
+  border-top: 1px solid var(--line);
+  background: var(--paper);
+  padding: 10px;
+}
+#mrag-panel .mrag-scope {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 11.5px; color: var(--muted);
+  margin-bottom: 8px;
+}
+#mrag-panel .mrag-scope input { accent-color: var(--accent); }
+#mrag-panel .mrag-input-row {
+  display: flex; gap: 8px; align-items: flex-end;
+}
+#mrag-panel textarea.mrag-input {
+  flex: 1;
+  resize: none;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-family: var(--font);
+  font-size: 13px;
+  line-height: 1.4;
+  background: var(--surface);
+  color: var(--text);
+  max-height: 140px;
+  min-height: 42px;
+}
+#mrag-panel textarea.mrag-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(91,91,214,0.15);
+}
+
+/* ---- buttons ---- */
+#mrag-panel .mrag-btn {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  text-align: center;
+}
+#mrag-panel .mrag-btn:hover { background: var(--accent-press); }
+#mrag-panel .mrag-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+#mrag-panel .mrag-btn.mrag-btn-send {
+  width: 42px; height: 42px; padding: 0; flex: none; border-radius: 10px;
+}
+#mrag-panel .mrag-btn-ghost {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--line-strong);
+  padding: 8px 12px;
+  font-size: 12px;
+}
+#mrag-panel .mrag-btn-ghost:hover { background: #f1eee7; }
+#mrag-panel .mrag-btn-block { width: 100%; }
+
+/* ---- forms (Reply) ---- */
+#mrag-panel .mrag-field { margin-bottom: 14px; }
+#mrag-panel .mrag-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+#mrag-panel .mrag-control {
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  padding: 9px 11px;
+  font-family: var(--font);
+  font-size: 13px;
+  line-height: 1.45;
+  background: var(--surface);
+  color: var(--text);
+}
+#mrag-panel textarea.mrag-control { resize: vertical; min-height: 70px; }
+#mrag-panel .mrag-control:focus {
+  outline: none; border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(91,91,214,0.15);
+}
+#mrag-panel .mrag-hint { font-size: 11px; color: var(--muted); margin-top: 5px; line-height: 1.4; }
+
+/* result blocks (analyze / reply output) */
+#mrag-panel .mrag-result {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  margin-top: 4px;
+}
+#mrag-panel .mrag-result h4 {
+  margin: 0 0 8px;
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--muted); font-weight: 700;
+}
+#mrag-panel .mrag-result p {
+  margin: 0 0 10px; font-size: 13px; line-height: 1.6; white-space: pre-wrap;
+}
+#mrag-panel .mrag-actions-list { margin: 0; padding-left: 18px; }
+#mrag-panel .mrag-actions-list li { font-size: 13px; line-height: 1.55; margin-bottom: 6px; }
+#mrag-panel .mrag-result-foot {
+  display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;
+}
+
+/* notices */
+#mrag-panel .mrag-notice {
+  font-size: 12.5px;
+  line-height: 1.5;
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+#mrag-panel .mrag-notice-warn {
+  background: #fdf3e3; border: 1px solid #f0d8a8; color: #8a5a12;
+}
+#mrag-panel .mrag-notice-err {
+  background: #fbeceb; border: 1px solid #f1c3bd; color: var(--danger);
+}
+
+/* spinner */
+#mrag-panel .mrag-spinner {
+  display: inline-block; width: 15px; height: 15px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: mrag-spin 0.7s linear infinite;
+}
+#mrag-panel .mrag-thinking {
+  display: flex; align-items: center; gap: 9px;
+  color: var(--muted); font-size: 12.5px; padding: 4px 2px;
+}
+#mrag-panel .mrag-thinking .mrag-spinner {
+  border-color: rgba(91,91,214,0.25); border-top-color: var(--accent);
+}
+@keyframes mrag-spin { to { transform: rotate(360deg); } }
+
+/* toast */
+#mrag-toast {
+  position: fixed;
+  bottom: 22px; left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  z-index: 2147482200;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--font);
+  font-size: 12.5px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+#mrag-toast.is-shown { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* scrollbar */
+#mrag-panel .mrag-scroll::-webkit-scrollbar { width: 10px; }
+#mrag-panel .mrag-scroll::-webkit-scrollbar-thumb {
+  background: var(--line-strong); border-radius: 6px;
+  border: 3px solid var(--paper);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #mrag-panel, #mrag-launcher, #mrag-toast { transition: none; }
+  #mrag-panel .mrag-spinner { animation-duration: 1.4s; }
+}
