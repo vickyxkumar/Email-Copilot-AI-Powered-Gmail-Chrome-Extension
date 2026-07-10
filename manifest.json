@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Mail RAG Assistant",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Chat with your indexed Gmail, summarize the open thread, and draft replies using your own RAG backend.",
   "permissions": ["storage"],
   "host_permissions": [
