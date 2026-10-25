@@ -1,6 +1,6 @@
 const DEFAULTS = {
   apiBaseUrl: "http://localhost:8000",
-  askPath: "/ask",
+  askPath: "/ask/stream",
   replyPath: "/reply",
   analyzePath: "/analyze",
 };
@@ -27,9 +27,23 @@ function normPath(p, fallback) {
   return p.startsWith("/") ? p : "/" + p;
 }
 
+function flash(text, color) {
+  els.saved.textContent = text;
+  els.saved.style.color = color || "";
+  els.saved.classList.add("show");
+  setTimeout(() => els.saved.classList.remove("show"), 1400);
+}
+
 els.save.addEventListener("click", () => {
+  const base = (els.base.value.trim() || DEFAULTS.apiBaseUrl).replace(/\/+$/, "");
+  // Without a scheme, fetch() and the sign-in tab would both resolve the URL
+  // against the extension's own origin and fail with confusing errors.
+  if (!/^https?:\/\/[^/]+/i.test(base)) {
+    flash("Base URL must start with http:// or https://", "var(--danger)");
+    return;
+  }
   const cfg = {
-    apiBaseUrl: (els.base.value.trim() || DEFAULTS.apiBaseUrl).replace(/\/+$/, ""),
+    apiBaseUrl: base,
     askPath: normPath(els.ask.value, DEFAULTS.askPath),
     replyPath: normPath(els.reply.value, DEFAULTS.replyPath),
     analyzePath: normPath(els.analyze.value, DEFAULTS.analyzePath),
@@ -39,7 +53,6 @@ els.save.addEventListener("click", () => {
     els.ask.value = cfg.askPath;
     els.reply.value = cfg.replyPath;
     els.analyze.value = cfg.analyzePath;
-    els.saved.classList.add("show");
-    setTimeout(() => els.saved.classList.remove("show"), 1400);
+    flash("Saved");
   });
 });

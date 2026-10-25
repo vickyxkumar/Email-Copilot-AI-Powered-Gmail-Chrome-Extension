@@ -35,17 +35,46 @@
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 
+  // After the extension is updated or reloaded, this script stays alive in
+  // already-open Gmail tabs but chrome.runtime calls throw synchronously.
+  const STALE_MSG = "The extension was updated or reloaded. Refresh this Gmail tab to keep using it.";
+
   function callApi(pathKey, body) {
     return new Promise((resolve) => {
-      chrome.runtime.sendMessage({ type: "api", pathKey, body }, (resp) => {
-        if (chrome.runtime.lastError) {
-          resolve({ ok: false, error: chrome.runtime.lastError.message });
-        } else {
-          resolve(resp || { ok: false, error: "No response from background." });
-        }
-      });
+      try {
+        chrome.runtime.sendMessage({ type: "api", pathKey, body }, (resp) => {
+          if (chrome.runtime.lastError) {
+            resolve({ ok: false, error: chrome.runtime.lastError.message });
+          } else {
+            resolve(resp || { ok: false, error: "No response from background." });
+          }
+        });
+      } catch {
+        resolve({ ok: false, error: STALE_MSG });
+      }
     });
   }
+
+  function sendMsg(type) {
+    return new Promise((resolve) => {
+      try {
+        chrome.runtime.sendMessage({ type }, (resp) => {
+          if (chrome.runtime.lastError) {
+            resolve({ success: false, error: chrome.runtime.lastError.message });
+          } else {
+            resolve(resp || { success: false, error: "No response from background." });
+          }
+        });
+      } catch {
+        resolve({ success: false, error: STALE_MSG });
+      }
+    });
+  }
+
+  // Keys must match background.js's chrome.storage.local keys.
+  const TOKEN_KEY = "mrag_access_token";
+  const USER_KEY = "mrag_user";
+  const AUTH_ERROR_KEY = "mrag_auth_error";
 
   function fmtCost(data) {
     if (!data) return "";
@@ -121,7 +150,12 @@
           </div>
           <button class="mrag-iconbtn" id="mrag-close" title="Close">${ICON_CLOSE}</button>
         </div>
-        <div class="mrag-context">
+        <div class="mrag-account-row" id="mrag-account-row" style="display:none">
+          <img class="mrag-account-pic" id="mrag-account-pic" alt="">
+          <span class="mrag-account-name" id="mrag-account-name"></span>
+          <button class="mrag-signout-btn" id="mrag-signout" title="Sign out">Sign out</button>
+        </div>
+        <div class="mrag-context" id="mrag-context-row">
           <span class="mrag-dot"></span>
           <div class="mrag-context-text">
             <div class="mrag-context-label" id="mrag-ctx-label">No thread open</div>
@@ -131,13 +165,21 @@
         </div>
       </header>
 
-      <nav class="mrag-tabs">
+      <div class="mrag-authgate" id="mrag-authgate">
+        <div class="mrag-empty-spark">${SPARK_SVG}</div>
+        <h3 class="mrag-authgate-title">Sign in to get started</h3>
+        <p class="mrag-authgate-text">Connect your Google account so the assistant can read and answer questions about your mail.</p>
+        <button class="mrag-btn mrag-btn-block" id="mrag-signin">Sign in with Google</button>
+        <div class="mrag-notice mrag-notice-err" id="mrag-auth-error" style="display:none"></div>
+      </div>
+
+      <nav class="mrag-tabs" id="mrag-tabs">
         <button class="mrag-tab is-active" data-tab="ask">Ask</button>
         <button class="mrag-tab" data-tab="analyze">Summarize</button>
         <button class="mrag-tab" data-tab="reply">Reply</button>
       </nav>
 
-      <div class="mrag-body">
+      <div class="mrag-body" id="mrag-body">
         <!-- ASK -->
         <div class="mrag-pane is-active" data-pane="ask">
           <div class="mrag-scroll" id="mrag-chat">
@@ -221,8 +263,64 @@
 
   const toast = $("#mrag-toast", root);
 
+  const accountRow = $("#mrag-account-row", root);
+  const accountPic = $("#mrag-account-pic", root);
+  const accountName = $("#mrag-account-name", root);
+  const signoutBtn = $("#mrag-signout", root);
+  const signinBtn = $("#mrag-signin", root);
+  const authError = $("#mrag-auth-error", root);
+
   let context = { threadId: "", subject: "", bodyText: "", latestText: "", account: "" };
   let senderTouched = false;
+
+  // ---------- auth ----------
+  function applyAuthState(session) {
+    const loggedIn = !!(session && session.token);
+    root.classList.toggle("mrag-authed", loggedIn);
+    if (loggedIn && session.user) {
+      accountName.textContent = session.user.name || session.user.email || "Signed in";
+      if (session.user.picture_url) {
+        accountPic.src = session.user.picture_url;
+        accountPic.style.visibility = "visible";
+      } else {
+        accountPic.style.visibility = "hidden";
+      }
+      accountRow.style.display = "flex";
+    } else {
+      accountRow.style.display = "none";
+    }
+  }
+
+  async function loadSession() {
+    const resp = await sendMsg("getSession");
+    applyAuthState(resp.success ? resp.session : null);
+  }
+
+  signinBtn.addEventListener("click", async () => {
+    signinBtn.disabled = true;
+    authError.style.display = "none";
+    const resp = await sendMsg("login");
+    signinBtn.disabled = false;
+    if (!resp.success) {
+      authError.textContent = resp.error || "Couldn't start sign-in.";
+      authError.style.display = "block";
+    }
+  });
+
+  signoutBtn.addEventListener("click", async () => {
+    await sendMsg("logout");
+    applyAuthState(null);
+  });
+
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== "local") return;
+    if (changes[TOKEN_KEY] || changes[USER_KEY]) loadSession();
+    if (changes[AUTH_ERROR_KEY] && changes[AUTH_ERROR_KEY].newValue) {
+      authError.textContent = changes[AUTH_ERROR_KEY].newValue;
+      authError.style.display = "block";
+      chrome.storage.local.remove(AUTH_ERROR_KEY);
+    }
+  });
 
   // ---------- open / close ----------
   function openPanel() { root.classList.add("mrag-open"); refreshContext(); question.focus(); }
@@ -288,7 +386,7 @@
   }
   question.addEventListener("input", autoGrow);
   question.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendQuestion(); }
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendQuestion(); }
   });
   sendBtn.addEventListener("click", sendQuestion);
 
@@ -327,29 +425,99 @@
       const sub = [from, date].filter(Boolean).map(esc).join(" · ");
       if (sub) html += `<div style="color:var(--muted);margin-top:2px">${sub}</div>`;
       if (snippet) html += `<div style="margin-top:4px">${esc(String(snippet).slice(0, 260))}</div>`;
-      if (link) html += `<div style="margin-top:4px"><a href="${esc(link)}" target="_blank" rel="noopener">Open</a></div>`;
+      // Only http(s) links: a javascript: URL here would run inside Gmail.
+      if (/^https?:\/\//i.test(link)) html += `<div style="margin-top:4px"><a href="${esc(link)}" target="_blank" rel="noopener">Open</a></div>`;
       if (!html) html = esc(JSON.stringify(s));
       return `<div class="mrag-source">${html}</div>`;
     }).join("");
     return `<div class="mrag-sources"><div class="mrag-sources-title">Sources</div>${items}</div>`;
   }
 
-  function addBotMsg(data) {
+  function addStreamingBotMsg() {
     const n = el("div", "mrag-msg");
-    const answer = (data && data.answer) || "(empty answer)";
-    let html = `<div class="mrag-msg-bot">${esc(answer)}${renderSources(data && data.sources)}`;
-    const cost = fmtCost(data);
-    if (cost) html += `<div class="mrag-meta">${cost}</div>`;
-    html += `</div>`;
-    n.innerHTML = html;
+    const bubble = el("div", "mrag-msg-bot");
+    const textSpan = document.createElement("span");
+    textSpan.className = "mrag-stream-text mrag-streaming";
+    bubble.appendChild(textSpan);
+    n.appendChild(bubble);
     chat.appendChild(n);
     chat.scrollTop = chat.scrollHeight;
+    return { bubble, textSpan };
   }
   function addBotError(msg) {
     const n = el("div", "mrag-msg");
     n.innerHTML = `<div class="mrag-msg-bot"><div class="mrag-notice mrag-notice-err" style="margin:0">${esc(msg)}</div></div>`;
     chat.appendChild(n);
     chat.scrollTop = chat.scrollHeight;
+  }
+
+  // Streams tokens from background.js over a long-lived port (the backend
+  // sends Server-Sent Events: repeated {token} data lines, then an "event:
+  // done" line carrying the full answer + sources).
+  function streamQuestion(q, threadId, thinking) {
+    return new Promise((resolve) => {
+      let port;
+      try {
+        port = chrome.runtime.connect({ name: "ask-stream" });
+      } catch (err) {
+        thinking.remove();
+        addBotError(`Couldn't reach the assistant: ${err.message}`);
+        resolve();
+        return;
+      }
+
+      let stream = null;
+      let accumulated = "";
+
+      const ensureStarted = () => {
+        if (stream) return;
+        thinking.remove();
+        stream = addStreamingBotMsg();
+      };
+
+      port.onMessage.addListener((msg) => {
+        if (msg.type === "token") {
+          ensureStarted();
+          accumulated += msg.token;
+          stream.textSpan.textContent = accumulated;
+          chat.scrollTop = chat.scrollHeight;
+        } else if (msg.type === "done") {
+          ensureStarted();
+          const d = msg.data || {};
+          stream.textSpan.textContent = typeof d.answer === "string" ? d.answer : accumulated;
+          stream.textSpan.classList.remove("mrag-streaming");
+          let extra = renderSources(d.sources);
+          const cost = fmtCost(d);
+          if (cost) extra += `<div class="mrag-meta">${cost}</div>`;
+          if (extra) stream.bubble.insertAdjacentHTML("beforeend", extra);
+        } else if (msg.type === "error") {
+          if (stream) {
+            stream.textSpan.classList.remove("mrag-streaming");
+            stream.bubble.insertAdjacentHTML(
+              "beforeend",
+              `<div class="mrag-notice mrag-notice-err" style="margin-top:8px">${esc(msg.error)}</div>`
+            );
+          } else {
+            thinking.remove();
+            addBotError(msg.error);
+          }
+          // Errors are terminal; background sends no "end" after one.
+          port.disconnect();
+          resolve();
+        } else if (msg.type === "end") {
+          port.disconnect();
+          resolve();
+        }
+      });
+
+      port.onDisconnect.addListener(() => {
+        if (stream) stream.textSpan.classList.remove("mrag-streaming");
+        else thinking.remove();
+        resolve();
+      });
+
+      port.postMessage({ question: q, thread_id: threadId });
+    });
   }
 
   let asking = false;
@@ -364,13 +532,7 @@
     const thinking = addThinking();
 
     const useThread = context.threadId && scopeBox.checked;
-    const resp = await callApi("askPath", {
-      question: q,
-      thread_id: useThread ? context.threadId : "",
-    });
-    thinking.remove();
-    if (resp.ok) addBotMsg(resp.data);
-    else addBotError(resp.error);
+    await streamQuestion(q, useThread ? context.threadId : "", thinking);
 
     asking = false;
     sendBtn.disabled = false;
@@ -422,12 +584,14 @@
     const box = document.querySelector('div[aria-label="Message Body"][role="textbox"], div[g_editable="true"][role="textbox"]');
     if (!box) return false;
     box.focus();
-    // Replace contents with the draft as paragraphs.
+    // Replace contents with the draft, one <div> per line the way Gmail's own
+    // editor does, so single line breaks (e.g. "Best,\nName") survive.
     box.innerHTML = "";
-    text.split(/\n{2,}/).forEach((para) => {
-      const p = document.createElement("div");
-      p.textContent = para;
-      box.appendChild(p);
+    text.split(/\r?\n/).forEach((line) => {
+      const div = document.createElement("div");
+      if (line.trim()) div.textContent = line;
+      else div.appendChild(document.createElement("br"));
+      box.appendChild(div);
     });
     box.dispatchEvent(new Event("input", { bubbles: true }));
     return true;
@@ -479,4 +643,5 @@
 
   // initial state
   refreshContext();
+  loadSession();
 })();

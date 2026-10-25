@@ -2,11 +2,32 @@
 
 A side panel injected into Gmail (web) that talks to **your** RAG backend. Three modes:
 
-- **Ask** — chat with your indexed mail. `POST /ask` → `{question, thread_id}`. Optionally scopes to the open thread.
+- **Ask** — chat with your indexed mail. `POST /ask/stream` → `{question, thread_id}`, streamed back as Server-Sent Events: repeated `data: {"token": "..."}` chunks, followed by `event: done` / `data: {"done": true, "answer": "...", "sources": [...]}`. Optionally scopes to the open thread.
 - **Summarize** — summarize the open thread. `POST /analyze` → `{thread_id}`, renders `summary` + `action_items`.
 - **Reply** — draft a reply from the open message. `POST /reply` → `{raw_text, thread_id, instructions, sender_name}`, renders `draft` with copy / insert-into-Gmail.
 
-Auth is intentionally left out for now — the backend handles Google auth, per your setup.
+## Sign in with Google
+
+The panel is gated behind Google sign-in — the chat UI (Ask / Summarize / Reply) only appears once you're authenticated; otherwise you just see a "Sign in with Google" screen.
+
+1. Clicking **Sign in with Google** opens a new tab at `GET {apiBaseUrl}/auth/login`.
+2. You complete the Google OAuth consent flow in that tab.
+3. Google redirects back to `GET {apiBaseUrl}/auth/callback`, which your backend uses (a single time — no repeat exchange of the OAuth code) to set a session cookie and respond with JSON, rendered directly in that tab:
+   ```json
+   {
+     "status": "success",
+     "access_token": "...",
+     "token_type": "bearer",
+     "user_id": "...",
+     "email": "...",
+     "name": "...",
+     "picture_url": "..."
+   }
+   ```
+4. The background service worker (`background.js`) detects that navigation via `chrome.tabs.onUpdated`, then injects a small script into that tab (`chrome.scripting.executeScript`) that reads the JSON straight from the page (`document.body.textContent`) and relays it back via `chrome.runtime.sendMessage`. The background worker stores the token + profile in `chrome.storage.local` and closes the login tab.
+5. Every subsequent `/ask/stream`, `/analyze`, and `/reply` call is sent with `Authorization: Bearer <access_token>`. A `401` response clears the stored session and drops you back to the sign-in screen.
+
+Sign out from the account row at the top of the panel — this just clears `chrome.storage.local`.
 
 ## Install (unpacked)
 
@@ -20,9 +41,7 @@ Auth is intentionally left out for now — the backend handles Google auth, per 
 Click the extension's toolbar icon for settings:
 
 - **API base URL** — default `http://localhost:8000`.
-- **Ask / Reply / Analyze endpoints** — default `/ask`, `/reply`, `/analyze`.
-
-> Your spec listed the reply route as `/ask` too — that's almost certainly a typo, so the default is `/reply`. Change it in settings if your route differs. No code edits needed.
+- **Ask / Reply / Analyze endpoints** — default `/ask/stream`, `/reply`, `/analyze`.
 
 Reload the Gmail tab after changing the base URL.
 

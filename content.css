@@ -158,6 +158,65 @@
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
+/* ---- account row (shown once signed in) ---- */
+#mrag-panel .mrag-account-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+#mrag-panel .mrag-account-pic {
+  width: 22px; height: 22px; flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+  background: rgba(255,255,255,0.15);
+}
+#mrag-panel .mrag-account-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #eef1f8;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#mrag-panel .mrag-signout-btn {
+  all: unset;
+  cursor: pointer;
+  flex: none;
+  font-size: 11px;
+  font-weight: 600;
+  color: #c3cadb;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+#mrag-panel .mrag-signout-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+/* ---- auth gate (shown until signed in) ---- */
+#mrag-panel .mrag-authgate {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 40px 24px;
+  gap: 6px;
+}
+#mrag-panel .mrag-authgate .mrag-empty-spark { opacity: 0.5; margin-bottom: 6px; }
+#mrag-panel .mrag-authgate-title { font-size: 15px; font-weight: 700; margin: 0; color: var(--text); }
+#mrag-panel .mrag-authgate-text {
+  font-size: 12.5px; line-height: 1.6; color: var(--muted); margin: 0 0 12px; max-width: 280px;
+}
+#mrag-panel .mrag-authgate .mrag-btn { width: 100%; max-width: 240px; }
+#mrag-panel .mrag-authgate .mrag-notice { margin-top: 12px; max-width: 280px; }
+
+/* hide the chat UI entirely until signed in */
+#mrag-root:not(.mrag-authed) #mrag-panel .mrag-authgate { display: flex; }
+#mrag-root.mrag-authed #mrag-panel .mrag-authgate { display: none; }
+#mrag-root:not(.mrag-authed) #mrag-panel #mrag-context-row,
+#mrag-root:not(.mrag-authed) #mrag-panel #mrag-tabs,
+#mrag-root:not(.mrag-authed) #mrag-panel #mrag-body {
+  display: none;
+}
+
 /* ---- tabs ---- */
 #mrag-panel .mrag-tabs {
   flex: none;
@@ -228,6 +287,16 @@
   white-space: pre-wrap;
   word-wrap: break-word;
 }
+#mrag-panel .mrag-stream-text { white-space: pre-wrap; word-wrap: break-word; }
+#mrag-panel .mrag-stream-text.mrag-streaming::after {
+  content: "▍";
+  display: inline-block;
+  margin-left: 1px;
+  color: var(--accent);
+  animation: mrag-blink 1s steps(1) infinite;
+}
+@keyframes mrag-blink { 50% { opacity: 0; } }
+
 #mrag-panel .mrag-meta {
   margin-top: 7px;
   font-size: 10.5px;

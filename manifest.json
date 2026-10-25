@@ -3,7 +3,7 @@
   "name": "Mail RAG Assistant",
   "version": "1.0.0",
   "description": "Chat with your indexed Gmail, summarize the open thread, and draft replies using your own RAG backend.",
-  "permissions": ["storage"],
+  "permissions": ["storage", "scripting"],
   "host_permissions": [
     "http://localhost/*",
     "http://127.0.0.1/*"
